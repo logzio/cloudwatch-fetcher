@@ -1,0 +1,7 @@
+log_groups:
+  - path: '/aws/lambda/miri-print'
+    custom_fields:
+      key1: val1
+      key2: val2
+aws_region: 'us-east-1'
+collection_interval: 10
