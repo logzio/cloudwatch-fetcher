@@ -148,8 +148,8 @@ class Manager:
                     resp = cw_client.filter_log_events(logGroupName=log_group.path,
                                                        startTime=log_group.latest_time * 1000,
                                                        endTime=now * 1000)
-                print(resp)
                 logs = self._process_events(resp[self.KEY_EVENTS], additional_fields)
+                # todo - send logs
                 next_token = resp[self.KEY_NEXT_TOKEN]
                 if next_token == '':
                     break
@@ -157,6 +157,8 @@ class Manager:
             except Exception as e:
                 logger.error(f'Error while trying to get log events for {log_group.path}: {e}')
                 break
+
+        log_group.latest_time = now
 
     def _get_additional_fields(self, log_group) -> dict:
         additional_fields = {self.FIELD_LOG_GROUP: log_group.path,
