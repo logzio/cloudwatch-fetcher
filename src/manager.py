@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Manager:
     SHIPPER = 'cw-fetcher'
+    DEFAULT_TYPE = 'cloudwatch'
     CONFIG_FILE = 'shared/config.yaml'
     _DEFAULT_INTERVAL = 5
     _DEFAULT_LOGZIO_LISTENER = 'https://listener.logz.io:8071'
@@ -21,11 +22,20 @@ class Manager:
     ENV_LOGZIO_LISTENER = 'LOGZIO_LISTENER'
     KEY_NEXT_TOKEN = 'nextToken'
     KEY_EVENTS = 'events'
+    KEY_MESSAGE = 'message'
+    KEY_TIMESTAMP = 'timestamp'
     FIELD_NAMESPACE = 'namespace'
     FIELD_LOG_GROUP = 'logGroup'
     FIELD_LOG_STREAM = 'logStream'
     FIELD_OWNER = 'owner'
     FIELD_SHIPPER = 'shipper'
+    FIELD_TYPE = 'type'
+    FIELD_ID = 'id'
+    FIELD_LOG_LEVEL = 'log_level'
+    FIELD_TIMESTAMP = '@timestamp'
+    LOG_LEVELS = ['ALERT', 'TRACE', 'DEBUG', 'NOTICE', 'INFO', 'WARN',
+                  'WARNING', 'ERROR', 'ERR', 'CRITICAL', 'CRIT',
+                  'FATAL', 'SEVERE', 'EMERG', 'EMERGENCY']
 
     def __init__(self) -> None:
         self._threads = []
@@ -67,9 +77,6 @@ class Manager:
         except Exception as e:
             logger.error(f'Encountered error while getting AWS account id: {e}')
             return ''
-
-
-
 
     def _read_data_from_config(self) -> bool:
         config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.CONFIG_FILE)
@@ -142,7 +149,7 @@ class Manager:
                                                        startTime=log_group.latest_time * 1000,
                                                        endTime=now * 1000)
                 print(resp)
-                logs = self._process_events(resp[self.KEY_EVENTS])
+                logs = self._process_events(resp[self.KEY_EVENTS], additional_fields)
                 next_token = resp[self.KEY_NEXT_TOKEN]
                 if next_token == '':
                     break
@@ -152,7 +159,9 @@ class Manager:
                 break
 
     def _get_additional_fields(self, log_group) -> dict:
-        additional_fields = {self.FIELD_LOG_GROUP: log_group.path, self.FIELD_SHIPPER: self.SHIPPER}
+        additional_fields = {self.FIELD_LOG_GROUP: log_group.path,
+                             self.FIELD_SHIPPER: self.SHIPPER,
+                             self.FIELD_TYPE: self.DEFAULT_TYPE}
         if self._account_id != '':
             additional_fields[self.FIELD_OWNER] = self._account_id
         if log_group.custom_fields is not None and len(log_group.custom_fields) > 0:
@@ -160,7 +169,40 @@ class Manager:
         if log_group.namespace != '':
             additional_fields[self.FIELD_NAMESPACE] = log_group.namespace
 
-    def _process_events(self, events) -> list[dict]:
+    def _process_events(self, events, additional_fields):
+        for event in events:
+            # add additional fields
+            event.update(additional_fields)
+            # rename logStreamName -> logStream (to follow existing conventions for cw logs)
+            if 'logStreamName' in event:
+                event[self.FIELD_LOG_STREAM] = event['logStreamName']
+                del event['logStreamName']
+            # rename eventId -> id (to follow existing conventions for cw logs)
+            if 'eventId' in event:
+                event[self.FIELD_ID] = event['eventId']
+                del event['eventId']
+            if self.KEY_MESSAGE in event:
+                # remove newline at the end of the message, if exists
+                event[self.KEY_MESSAGE] = event[self.KEY_MESSAGE].rstrip('\n')
+                log_level = self._get_log_level_from_message(str(event[self.KEY_MESSAGE]))
+                if log_level != '':
+                    event[self.FIELD_LOG_LEVEL] = log_level
+        return events
+
+    def _get_log_level_from_message(self, message):
+        try:
+            start_level = message.index('[')
+            end_level = message.index(']')
+            log_level = message[start_level + 1:end_level].upper()
+            if log_level in self.LOG_LEVELS:
+                return log_level
+        except ValueError:
+            return ''
+        return ''
+
+
+
+
 
 
 
