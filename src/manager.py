@@ -187,6 +187,9 @@ class Manager:
                 log_level = self._get_log_level_from_message(str(event[self.KEY_MESSAGE]))
                 if log_level != '':
                     event[self.FIELD_LOG_LEVEL] = log_level
+            if self.KEY_TIMESTAMP in event:
+                event[self.FIELD_TIMESTAMP] = event[self.KEY_TIMESTAMP]
+                del event[self.KEY_TIMESTAMP]
         return events
 
     def _get_log_level_from_message(self, message):
