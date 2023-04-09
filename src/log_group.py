@@ -23,6 +23,7 @@ class LogGroup:
         self.custom_fields = custom_fields
         self.namespace = self._get_namespace_by_path()
         self.latest_time = self._get_first_latest_time(start_time, interval)
+        self.next_token = ''
 
     def _get_namespace_by_path(self) -> str:
         for key in self._LOG_GROUP_TO_PREFIX:

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import threading
@@ -42,12 +43,12 @@ class Manager:
         self._event = threading.Event()
         self._lock = threading.Lock()
         self._log_groups = []
-        self._interval = self._DEFAULT_INTERVAL
+        self._interval = self._DEFAULT_INTERVAL  # minutes
         self._logzio_token = ''
         self._logzio_listener = ''
         self._aws_region = ''
         self.start_time = int(time.time())
-        self._account_id = self._get_account_id()
+        self._account_id = ''
 
     def run(self) -> None:
         logger.info('Starting Cloudwatch Fetcher')
@@ -55,6 +56,7 @@ class Manager:
             return
         if not self._read_data_from_config():
             return
+        self._account_id = self._get_account_id()
         for log_group in self._log_groups:
             self._threads.append(threading.Thread(target=self._run_scheduled_log_collection, args=(log_group,)))
         for thread in self._threads:
@@ -119,13 +121,15 @@ class Manager:
             thread.start()
             thread.join()
 
-            if self._event.wait(timeout=self._interval):
+            timeout_seconds = self._interval * 60
+            if self._event.wait(timeout=timeout_seconds):
+                logger.info('Terminating...')
                 break
 
     def _fetch_and_send(self, log_group: LogGroup, logzio_shipper: LogzioShipper) -> None:
-        next_token = ''
         now = int(time.time())
         resp = None
+        new_logs = False
         try:
             session = boto3.session.Session(region_name=self._aws_region)
             cw_client = session.client('logs')
@@ -139,26 +143,34 @@ class Manager:
             try:
                 logger.debug(f'Start time: {log_group.latest_time}')
                 logger.debug(f'End time: {now}')
-                if next_token != '':
+                logger.debug(f'Next token: {log_group.next_token}')
+                if log_group.next_token != '':
                     resp = cw_client.filter_log_events(logGroupName=log_group.path,
                                                        startTime=log_group.latest_time * 1000,
                                                        endTime=now * 1000,
-                                                       nextToken=next_token)
+                                                       nextToken=log_group.next_token)
                 else:
                     resp = cw_client.filter_log_events(logGroupName=log_group.path,
                                                        startTime=log_group.latest_time * 1000,
                                                        endTime=now * 1000)
-                logs = self._process_events(resp[self.KEY_EVENTS], additional_fields)
-                # todo - send logs
-                next_token = resp[self.KEY_NEXT_TOKEN]
-                if next_token == '':
+                if self.KEY_NEXT_TOKEN in resp:
+                    log_group.next_token = resp[self.KEY_NEXT_TOKEN]
+                if len(resp[self.KEY_EVENTS]) == 0:
+                    logger.info('No new logs at the moment')
                     break
+                new_logs = True
+                logger.info(f'Got {len(resp[self.KEY_EVENTS])} new logs')
+                self._process_events(resp[self.KEY_EVENTS], additional_fields, logzio_shipper)
+                # if next_token == '':
+                #     break
                 break
             except Exception as e:
                 logger.error(f'Error while trying to get log events for {log_group.path}: {e}')
                 break
 
         log_group.latest_time = now
+        if new_logs:
+            logzio_shipper.send_to_logzio()
 
     def _get_additional_fields(self, log_group) -> dict:
         additional_fields = {self.FIELD_LOG_GROUP: log_group.path,
@@ -170,29 +182,48 @@ class Manager:
             additional_fields.update(log_group.custom_fields)
         if log_group.namespace != '':
             additional_fields[self.FIELD_NAMESPACE] = log_group.namespace
+        return additional_fields
 
-    def _process_events(self, events, additional_fields):
+    def _process_events(self, events, additional_fields, logzio_shipper):
         for event in events:
-            # add additional fields
-            event.update(additional_fields)
-            # rename logStreamName -> logStream (to follow existing conventions for cw logs)
-            if 'logStreamName' in event:
-                event[self.FIELD_LOG_STREAM] = event['logStreamName']
-                del event['logStreamName']
-            # rename eventId -> id (to follow existing conventions for cw logs)
-            if 'eventId' in event:
-                event[self.FIELD_ID] = event['eventId']
-                del event['eventId']
-            if self.KEY_MESSAGE in event:
-                # remove newline at the end of the message, if exists
-                event[self.KEY_MESSAGE] = event[self.KEY_MESSAGE].rstrip('\n')
-                log_level = self._get_log_level_from_message(str(event[self.KEY_MESSAGE]))
-                if log_level != '':
-                    event[self.FIELD_LOG_LEVEL] = log_level
-            if self.KEY_TIMESTAMP in event:
-                event[self.FIELD_TIMESTAMP] = event[self.KEY_TIMESTAMP]
-                del event[self.KEY_TIMESTAMP]
-        return events
+            try:
+                # add additional fields
+                if additional_fields is not None and len(additional_fields) > 0:
+                    event.update(additional_fields)
+            except Exception as e:
+                logger.warning(f'Error while trying to add additional fields: {e}')
+            try:
+                # rename logStreamName -> logStream (to follow existing conventions for cw logs)
+                if 'logStreamName' in event:
+                    event[self.FIELD_LOG_STREAM] = event['logStreamName']
+                    del event['logStreamName']
+            except Exception as e:
+                logger.warning(f'Error while trying to rename logStreamName: {e}')
+            try:
+                # rename eventId -> id (to follow existing conventions for cw logs)
+                if 'eventId' in event:
+                    event[self.FIELD_ID] = event['eventId']
+                    del event['eventId']
+            except Exception as e:
+                logger.warning(f'Error while trying to rename eventId: {e}')
+            try:
+                if self.KEY_MESSAGE in event:
+                    # remove newline at the end of the message, if exists
+                    event[self.KEY_MESSAGE] = event[self.KEY_MESSAGE].rstrip('\n')
+                    log_level = self._get_log_level_from_message(str(event[self.KEY_MESSAGE]))
+                    if log_level != '':
+                        event[self.FIELD_LOG_LEVEL] = log_level
+            except Exception as e:
+                logger.warning(f'Error while trying to process message: {e}')
+            try:
+                if self.KEY_TIMESTAMP in event:
+                    event[self.FIELD_TIMESTAMP] = event[self.KEY_TIMESTAMP]
+                    del event[self.KEY_TIMESTAMP]
+            except Exception as e:
+                logger.warning(f'Error while trying to process timestamp: {e}')
+            log_str = json.dumps(event)
+            logzio_shipper.add_log_to_send(log_str)
+        # return events
 
     def _get_log_level_from_message(self, message):
         try:
@@ -204,13 +235,6 @@ class Manager:
         except ValueError:
             return ''
         return ''
-
-
-
-
-
-
-
 
     def __exit_gracefully(self) -> None:
         logger.info("Signal caught...")
