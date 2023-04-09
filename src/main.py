@@ -3,7 +3,7 @@ from os import path
 from src.manager import Manager
 
 
-def main() -> None:
+def main():
     log_conf_path = path.join(path.dirname(path.abspath(__file__)), 'logging_config.ini')
     fileConfig(log_conf_path, disable_existing_loggers=False)
     Manager().run()

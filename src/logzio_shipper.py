@@ -22,13 +22,13 @@ class LogzioShipper:
     STATUS_FORCELIST = [500, 502, 503, 504]
     CONNECTION_TIMEOUT_SECONDS = 5
 
-    def __init__(self, logzio_url: str, token: str) -> None:
+    def __init__(self, logzio_url, token):
         self._logzio_url = "{0}/?token={1}".format(logzio_url, token)
         self._logs = []
         self._bulk_size = 0
         self._custom_fields = {'type': 'cloudwatch', 'shipper': 'cw-fetcher'}
 
-    def add_log_to_send(self, log: str) -> None:
+    def add_log_to_send(self, log):
         enriched_log = self._add_custom_fields_to_log(log)
         enriched_log_size = len(enriched_log)
 
@@ -48,7 +48,7 @@ class LogzioShipper:
         self._logs.append(enriched_log)
         self._bulk_size = enriched_log_size
 
-    def send_to_logzio(self) -> None:
+    def send_to_logzio(self):
         if self._logs is None:
             return
 
@@ -99,7 +99,7 @@ class LogzioShipper:
             logger.error("Something went wrong. response: {}".format(e))
             raise
 
-    def _is_log_valid_to_be_sent(self, log: str, log_size: int) -> bool:
+    def _is_log_valid_to_be_sent(self, log, log_size):
         if log_size > LogzioShipper.MAX_LOG_SIZE_BYTES:
             logger.error(
                 "The following log's size is greater than the max log size - {0} bytes, that can be sent to Logz.io: "
@@ -109,7 +109,7 @@ class LogzioShipper:
 
         return True
 
-    def _add_custom_fields_to_log(self, log: str) -> str:
+    def _add_custom_fields_to_log(self, log):
         json_log = json.loads(log)
 
         for key, value in self._custom_fields.items():
@@ -122,7 +122,7 @@ class LogzioShipper:
             retries=MAX_RETRIES,
             backoff_factor=BACKOFF_FACTOR,
             status_forcelist=STATUS_FORCELIST
-    ) -> Session:
+    ):
         session = requests.Session()
         retry = Retry(
             total=retries,
@@ -141,6 +141,6 @@ class LogzioShipper:
 
         return session
 
-    def _reset_logs(self) -> None:
+    def _reset_logs(self):
         self._logs.clear()
         self._bulk_size = 0

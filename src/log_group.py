@@ -18,20 +18,20 @@ class LogGroup:
         "/aws/amazonmq/broker/": "aws/amazonmq"
     }
 
-    def __init__(self, path: str, custom_fields: dict, start_time: int, interval: int) -> None:
+    def __init__(self, path, custom_fields, start_time, interval):
         self.path = path
         self.custom_fields = custom_fields
         self.namespace = self._get_namespace_by_path()
         self.latest_time = self._get_first_latest_time(start_time, interval)
         self.next_token = ''
 
-    def _get_namespace_by_path(self) -> str:
+    def _get_namespace_by_path(self):
         for key in self._LOG_GROUP_TO_PREFIX:
             if self.path.startswith(key):
                 return self._LOG_GROUP_TO_PREFIX[key]
         return ''
 
-    def _get_first_latest_time(self, start_time: int, interval: int) -> int:
+    def _get_first_latest_time(self, start_time, interval):
         dt = datetime.datetime.fromtimestamp(start_time)
         minutes_ago = dt - datetime.timedelta(minutes=interval)
         unix_seconds = int(minutes_ago.timestamp())

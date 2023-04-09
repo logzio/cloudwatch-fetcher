@@ -38,7 +38,7 @@ class Manager:
                   'WARNING', 'ERROR', 'ERR', 'CRITICAL', 'CRIT',
                   'FATAL', 'SEVERE', 'EMERG', 'EMERGENCY']
 
-    def __init__(self) -> None:
+    def __init__(self):
         self._threads = []
         self._event = threading.Event()
         self._lock = threading.Lock()
@@ -50,7 +50,7 @@ class Manager:
         self.start_time = int(time.time())
         self._account_id = ''
 
-    def run(self) -> None:
+    def run(self):
         logger.info('Starting Cloudwatch Fetcher')
         if not self._get_logzio_credentials():
             return
@@ -80,7 +80,7 @@ class Manager:
             logger.error(f'Encountered error while getting AWS account id: {e}')
             return ''
 
-    def _read_data_from_config(self) -> bool:
+    def _read_data_from_config(self):
         config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.CONFIG_FILE)
         logger.info(f'Config file path: {config_file}')
         config_reader = ConfigReader(config_file)
@@ -104,7 +104,7 @@ class Manager:
             logger.info(f'Reverting {config_reader.KEY_INTERVAL} to default value: {self._DEFAULT_INTERVAL}')
         return True
 
-    def _get_logzio_credentials(self) -> bool:
+    def _get_logzio_credentials(self):
         self._logzio_token = os.getenv(self.ENV_LOGZIO_TOKEN)
         if self._logzio_token is None:
             logger.error(f'Env var {self.ENV_LOGZIO_TOKEN} must be set!')
@@ -112,7 +112,7 @@ class Manager:
         self._logzio_listener = os.getenv(self.ENV_LOGZIO_LISTENER, self._DEFAULT_LOGZIO_LISTENER)
         return True
 
-    def _run_scheduled_log_collection(self, log_group: LogGroup) -> None:
+    def _run_scheduled_log_collection(self, log_group):
         logzio_shipper = LogzioShipper(self._logzio_listener, self._logzio_token)
 
         while True:
@@ -126,7 +126,7 @@ class Manager:
                 logger.info('Terminating...')
                 break
 
-    def _fetch_and_send(self, log_group: LogGroup, logzio_shipper: LogzioShipper) -> None:
+    def _fetch_and_send(self, log_group, logzio_shipper):
         now = int(time.time())
         resp = None
         new_logs = False
@@ -172,7 +172,7 @@ class Manager:
         if new_logs:
             logzio_shipper.send_to_logzio()
 
-    def _get_additional_fields(self, log_group) -> dict:
+    def _get_additional_fields(self, log_group):
         additional_fields = {self.FIELD_LOG_GROUP: log_group.path,
                              self.FIELD_SHIPPER: self.SHIPPER,
                              self.FIELD_TYPE: self.DEFAULT_TYPE}
@@ -236,7 +236,7 @@ class Manager:
             return ''
         return ''
 
-    def __exit_gracefully(self) -> None:
+    def __exit_gracefully(self):
         logger.info("Signal caught...")
 
         self._event.set()

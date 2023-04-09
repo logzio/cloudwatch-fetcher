@@ -13,12 +13,12 @@ class ConfigReader:
     KEY_LOG_GROUP_CUSTOM_FIELDS = 'custom_fields'
     KEY_LOG_GROUP_REGION = 'aws_region'
 
-    def __init__(self, config_file: str) -> None:
+    def __init__(self, config_file):
         with open(config_file, 'r') as config:
             self._config_data = yaml.safe_load(config)
             logger.debug(self._config_data)
 
-    def get_log_groups(self, start_time: int, default_interval: int) -> []:
+    def get_log_groups(self, start_time, default_interval):
         log_groups = []
         if self.KEY_LOG_GROUPS not in self._config_data or len(self._config_data[self.KEY_LOG_GROUPS]) == 0:
             logger.error('No log groups in config')
@@ -39,7 +39,7 @@ class ConfigReader:
             log_groups.append(log_group)
         return log_groups
 
-    def get_time_interval(self) -> int:
+    def get_time_interval(self):
         time_interval = 0
         if self.KEY_INTERVAL in self._config_data:
             try:
@@ -48,7 +48,7 @@ class ConfigReader:
                 logger.warning(f'Could not parse field {self.KEY_INTERVAL}')
         return time_interval
 
-    def get_aws_region(self) -> str:
+    def get_aws_region(self):
         if self.KEY_LOG_GROUP_REGION in self._config_data:
             return self._config_data[self.KEY_LOG_GROUP_REGION]
         else:
