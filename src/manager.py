@@ -7,7 +7,6 @@ import boto3
 import time
 
 from .config_reader import ConfigReader
-from .log_group import LogGroup
 from .logzio_shipper import LogzioShipper
 
 logger = logging.getLogger(__name__)
