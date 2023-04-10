@@ -51,7 +51,8 @@ class Manager:
         self._aws_region = ''
         self.start_time = int(time.time())
         self._account_id = ''
-        self._position_manager = PositionManager(self.POS_FILE)
+        pos_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.POS_FILE)
+        self._position_manager = PositionManager(pos_path)
 
     def run(self):
         logger.info('Starting Cloudwatch Fetcher')
