@@ -7,7 +7,9 @@ import boto3
 import time
 
 from .config_reader import ConfigReader
+from .log_group import LogGroup
 from .logzio_shipper import LogzioShipper
+from .position_manager import PositionManager
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ class Manager:
     SHIPPER = 'cw-fetcher'
     DEFAULT_TYPE = 'cloudwatch'
     CONFIG_FILE = 'shared/config.yaml'
+    POS_FILE = 'shared/position.yaml'
     _DEFAULT_INTERVAL = 5
     _DEFAULT_LOGZIO_LISTENER = 'https://listener.logz.io:8071'
     ENV_LOGZIO_TOKEN = 'LOGZIO_LOG_SHIPPING_TOKEN'
@@ -48,6 +51,7 @@ class Manager:
         self._aws_region = ''
         self.start_time = int(time.time())
         self._account_id = ''
+        self._position_manager = PositionManager(self.POS_FILE)
 
     def run(self):
         logger.info('Starting Cloudwatch Fetcher')
@@ -57,6 +61,7 @@ class Manager:
             return
         self._account_id = self._get_account_id()
         for log_group in self._log_groups:
+            self._load_data_from_position_file(log_group)
             self._threads.append(threading.Thread(target=self._run_scheduled_log_collection, args=(log_group,)))
         for thread in self._threads:
             thread.start()
@@ -160,8 +165,6 @@ class Manager:
                 new_logs = True
                 logger.info(f'Got {len(resp[self.KEY_EVENTS])} new logs')
                 self._process_events(resp[self.KEY_EVENTS], additional_fields, logzio_shipper)
-                # if next_token == '':
-                #     break
                 break
             except Exception as e:
                 logger.error(f'Error while trying to get log events for {log_group.path}: {e}')
@@ -170,6 +173,7 @@ class Manager:
         log_group.latest_time = now
         if new_logs:
             logzio_shipper.send_to_logzio()
+            self._save_latest_to_file(log_group)
 
     def _get_additional_fields(self, log_group):
         additional_fields = {self.FIELD_LOG_GROUP: log_group.path,
@@ -222,7 +226,6 @@ class Manager:
                 logger.warning(f'Error while trying to process timestamp: {e}')
             log_str = json.dumps(event)
             logzio_shipper.add_log_to_send(log_str)
-        # return events
 
     def _get_log_level_from_message(self, message):
         try:
@@ -234,6 +237,21 @@ class Manager:
         except ValueError:
             return ''
         return ''
+
+    def _save_latest_to_file(self, log_group):
+        self._lock.acquire()
+        self._position_manager.update_position_file(log_group)
+        self._lock.release()
+
+    def _load_data_from_position_file(self, log_group):
+        pos_yaml = self._position_manager.get_pos_file_yaml()
+        if pos_yaml is None:
+            return
+        for lgp in pos_yaml:
+            if log_group.path == lgp[PositionManager.FIELD_PATH]:
+                log_group.next_token = lgp[PositionManager.FIELD_NEXT_TOKEN]
+                log_group.latest_time = lgp[PositionManager.FIELD_LATEST_TIME]
+                return
 
     def __exit_gracefully(self):
         logger.info("Signal caught...")
