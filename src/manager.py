@@ -63,7 +63,7 @@ class Manager:
         self._account_id = self._get_account_id()
         for log_group in self._log_groups:
             self._load_data_from_position_file(log_group)
-            self._threads.append(threading.Thread(target=self._run_scheduled_log_collection, args=(log_group,)))
+            self._threads.append(threading.Thread(target=self._run_scheduled_log_collection, args=(log_group,), name=f'scheduled_{log_group.path}'))
         for thread in self._threads:
             thread.start()
 
@@ -121,7 +121,7 @@ class Manager:
         logzio_shipper = LogzioShipper(self._logzio_listener, self._logzio_token)
 
         while True:
-            thread = threading.Thread(target=self._fetch_and_send, args=(log_group, logzio_shipper,))
+            thread = threading.Thread(target=self._fetch_and_send, args=(log_group, logzio_shipper,), name=f'fetch_{log_group.path}')
 
             thread.start()
             thread.join()
@@ -250,9 +250,11 @@ class Manager:
             return
         for lgp in pos_yaml:
             if log_group.path == lgp[PositionManager.FIELD_PATH]:
+                logger.info(f'Found data in position file for {log_group.path}, latest time: {lgp[PositionManager.FIELD_LATEST_TIME]}')
                 log_group.next_token = lgp[PositionManager.FIELD_NEXT_TOKEN]
                 log_group.latest_time = lgp[PositionManager.FIELD_LATEST_TIME]
                 return
+        logger.info(f'Could not find data in position file for {log_group.path}')
 
     def __exit_gracefully(self):
         logger.info("Signal caught...")
