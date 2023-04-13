@@ -61,6 +61,7 @@ class Manager:
         if not self._read_data_from_config():
             return
         self._account_id = self._get_account_id()
+        self._position_manager.sync_position_file(self._log_groups)
         for log_group in self._log_groups:
             self._load_data_from_position_file(log_group)
             self._threads.append(threading.Thread(target=self._run_scheduled_log_collection, args=(log_group,), name=f'scheduled_{log_group.path}'))
