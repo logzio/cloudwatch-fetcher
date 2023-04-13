@@ -52,6 +52,7 @@ class ConfigReader:
         if self.KEY_LOG_GROUP_REGION in self._config_data:
             return self._config_data[self.KEY_LOG_GROUP_REGION]
         else:
+            logger.debug('Could not find aws_region in configuration')
             return ''
 
 
