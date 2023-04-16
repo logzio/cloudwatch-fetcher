@@ -15,18 +15,18 @@ logger = logging.getLogger(__name__)
 
 
 class Manager:
-    SHIPPER = 'cw-fetcher'
-    DEFAULT_TYPE = 'cloudwatch'
-    CONFIG_FILE = 'shared/config.yaml'
-    POS_FILE = 'shared/position.yaml'
+    _SHIPPER = 'cw-fetcher'
+    _DEFAULT_TYPE = 'cloudwatch'
+    _CONFIG_FILE = 'shared/config.yaml'
+    _POS_FILE = 'shared/position.yaml'
     _DEFAULT_INTERVAL = 5
     _DEFAULT_LOGZIO_LISTENER = 'https://listener.logz.io:8071'
     ENV_LOGZIO_TOKEN = 'LOGZIO_LOG_SHIPPING_TOKEN'
     ENV_LOGZIO_LISTENER = 'LOGZIO_LISTENER'
-    KEY_NEXT_TOKEN = 'nextToken'
-    KEY_EVENTS = 'events'
+    _KEY_NEXT_TOKEN = 'nextToken'
+    _KEY_EVENTS = 'events'
     KEY_MESSAGE = 'message'
-    KEY_TIMESTAMP = 'timestamp'
+    _KEY_TIMESTAMP = 'timestamp'
     FIELD_NAMESPACE = 'namespace'
     FIELD_LOG_GROUP = 'logGroup'
     FIELD_LOG_STREAM = 'logStream'
@@ -36,7 +36,7 @@ class Manager:
     FIELD_ID = 'id'
     FIELD_LOG_LEVEL = 'log_level'
     FIELD_TIMESTAMP = '@timestamp'
-    LOG_LEVELS = ['ALERT', 'TRACE', 'DEBUG', 'NOTICE', 'INFO', 'WARN',
+    _LOG_LEVELS = ['ALERT', 'TRACE', 'DEBUG', 'NOTICE', 'INFO', 'WARN',
                   'WARNING', 'ERROR', 'ERR', 'CRITICAL', 'CRIT',
                   'FATAL', 'SEVERE', 'EMERG', 'EMERGENCY']
 
@@ -51,7 +51,7 @@ class Manager:
         self._aws_region = ''
         self.start_time = int(time.time())
         self._account_id = ''
-        pos_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.POS_FILE)
+        pos_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self._POS_FILE)
         self._position_manager = PositionManager(pos_path)
 
     def run(self):
@@ -87,7 +87,7 @@ class Manager:
             return ''
 
     def _read_data_from_config(self):
-        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.CONFIG_FILE)
+        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), self._CONFIG_FILE)
         logger.info(f'Config file path: {config_file}')
         config_reader = ConfigReader(config_file)
         if config_reader is None:
@@ -159,14 +159,14 @@ class Manager:
                     resp = cw_client.filter_log_events(logGroupName=log_group.path,
                                                        startTime=log_group.latest_time * 1000,
                                                        endTime=now * 1000)
-                if self.KEY_NEXT_TOKEN in resp:
-                    log_group.next_token = resp[self.KEY_NEXT_TOKEN]
-                if len(resp[self.KEY_EVENTS]) == 0:
+                if self._KEY_NEXT_TOKEN in resp:
+                    log_group.next_token = resp[self._KEY_NEXT_TOKEN]
+                if len(resp[self._KEY_EVENTS]) == 0:
                     logger.info('No new logs at the moment')
                     break
                 new_logs = True
-                logger.info(f'Got {len(resp[self.KEY_EVENTS])} new logs')
-                self._process_events(resp[self.KEY_EVENTS], additional_fields, logzio_shipper)
+                logger.info(f'Got {len(resp[self._KEY_EVENTS])} new logs')
+                self._process_events(resp[self._KEY_EVENTS], additional_fields, logzio_shipper)
                 break
             except Exception as e:
                 logger.error(f'Error while trying to get log events for {log_group.path}: {e}')
@@ -179,8 +179,8 @@ class Manager:
 
     def _get_additional_fields(self, log_group):
         additional_fields = {self.FIELD_LOG_GROUP: log_group.path,
-                             self.FIELD_SHIPPER: self.SHIPPER,
-                             self.FIELD_TYPE: self.DEFAULT_TYPE}
+                             self.FIELD_SHIPPER: self._SHIPPER,
+                             self.FIELD_TYPE: self._DEFAULT_TYPE}
         if self._account_id != '':
             additional_fields[self.FIELD_OWNER] = self._account_id
         if log_group.custom_fields is not None and len(log_group.custom_fields) > 0:
@@ -221,9 +221,9 @@ class Manager:
             except Exception as e:
                 logger.warning(f'Error while trying to process message: {e}')
             try:
-                if self.KEY_TIMESTAMP in event:
-                    event[self.FIELD_TIMESTAMP] = event[self.KEY_TIMESTAMP]
-                    del event[self.KEY_TIMESTAMP]
+                if self._KEY_TIMESTAMP in event:
+                    event[self.FIELD_TIMESTAMP] = event[self._KEY_TIMESTAMP]
+                    del event[self._KEY_TIMESTAMP]
             except Exception as e:
                 logger.warning(f'Error while trying to process timestamp: {e}')
             log_str = json.dumps(event)
@@ -234,7 +234,7 @@ class Manager:
             start_level = message.index('[')
             end_level = message.index(']')
             log_level = message[start_level + 1:end_level].upper()
-            if log_level in self.LOG_LEVELS:
+            if log_level in self._LOG_LEVELS:
                 return log_level
         except ValueError:
             return ''

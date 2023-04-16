@@ -56,16 +56,17 @@ class PositionManager:
     def sync_position_file(self, log_groups_config):
         current_log_groups = []
         pos_yaml = self.get_pos_file_yaml()
-        for log_group in pos_yaml:
-            for lg_config in log_groups_config:
-                if log_group[self.FIELD_PATH] == lg_config.path:
-                    logger.info(f'Found previous data for log group {lg_config.path}')
-                    current_log_groups.append(log_group)
-                    break
-        if len(current_log_groups) < len(pos_yaml):
-            # Some log groups were removed, we need to remove them from the position file
-            logger.debug(
-                f'Position file has {len(pos_yaml)} log groups, but only {len(current_log_groups)} match the current '
-                f'configuration')
-            logger.debug('Updating position file')
-            self._create_new_position_file(current_log_groups)
+        if pos_yaml is not None:
+            for log_group in pos_yaml:
+                for lg_config in log_groups_config:
+                    if log_group[self.FIELD_PATH] == lg_config.path:
+                        logger.info(f'Found previous data for log group {lg_config.path}')
+                        current_log_groups.append(log_group)
+                        break
+            if len(current_log_groups) < len(pos_yaml):
+                # Some log groups were removed, we need to remove them from the position file
+                logger.debug(
+                    f'Position file has {len(pos_yaml)} log groups, but only {len(current_log_groups)} match the current '
+                    f'configuration')
+                logger.debug('Updating position file')
+                self._create_new_position_file(current_log_groups)
