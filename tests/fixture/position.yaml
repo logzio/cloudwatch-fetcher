@@ -1,0 +1,6 @@
+- latest_time: 1681389974
+  next_token: some-token-123
+  path: /a/log/group
+- latest_time: 1681389974
+  next_token: another-token-456
+  path: some-other-log-group
