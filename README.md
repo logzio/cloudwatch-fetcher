@@ -2,6 +2,13 @@
 
 With this project you can define a time interval to fetch logs from AWS Cloudwatch, and ship them to Logz.io.
 
+## Prerequisites
+
+Before using this tool, you'll need to make sure that you have AWS access keys with permissions to:
+* `logs:FilterLogEvents`
+* `sts:GetCallerIdentity`
+
+
 ## Getting Started
 
 ### Available deployment methods:
@@ -58,12 +65,12 @@ logzio/cloudwatch-fetcher:latest
 
 Replace the following:
 
-| Parameter                        | Description                                                |
-|----------------------------------|------------------------------------------------------------|
-| `<<AWS-ACCESS-KEY>>`             | Your AWS access key                                        |
-| `<<AWS-SECRET-KEY>>`             | Your AWS secret key                                        |
-| `<<LOGZIO-LOGS-SHIPPING-TOKEN>>` | Your Logz.io logs shipping token                           |
-| `<<LOGZIO-LISTENER>>`            | Your logz.io listener url, for example: `listener.logz.io` |
+| Parameter                        | Description                                                                                                                                     |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| `<<AWS-ACCESS-KEY>>`             | Your AWS access key                                                                                                                             |
+| `<<AWS-SECRET-KEY>>`             | Your AWS secret key                                                                                                                             |
+| `<<LOGZIO-LOGS-SHIPPING-TOKEN>>` | Your [Logz.io logs shipping token](https://app.logz.io/#/dashboard/settings/general)                                                            |
+| `<<LOGZIO-LISTENER>>`            | Your logz.io [listener url](https://app.logz.io/#/dashboard/settings/manage-tokens/data-shipping?product=logs), for example: `listener.logz.io` |
 
 ### Stop docker container
 
