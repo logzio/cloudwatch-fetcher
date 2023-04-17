@@ -67,6 +67,8 @@ class Manager:
         except botocore.exceptions.BotoCoreError as bce:
             logger.error(f'Cannot authenticate AWS account: {bce}')
             return
+        if not self._valid_interval():
+            return
         self._position_manager.sync_position_file(self._log_groups)
         for log_group in self._log_groups:
             self._load_data_from_position_file(log_group)
@@ -76,6 +78,14 @@ class Manager:
 
         signal.sigwait([signal.SIGINT, signal.SIGTERM])
         self.__exit_gracefully()
+
+    def _valid_interval(self):
+        # Minimum 5 minutes, maximum 1380 minutes (23 hours)
+        min_interval = 5
+        max_interval = 1380
+        if self._interval < min_interval or self._interval > max_interval:
+            logger.error(f'Interval must be between {min_interval} and {max_interval} minutes!')
+            return False
 
     def _get_account_id(self):
         try:
