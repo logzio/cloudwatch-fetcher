@@ -6,6 +6,8 @@ import signal
 import boto3
 import time
 
+import botocore.exceptions
+
 from .config_reader import ConfigReader
 from .log_group import LogGroup
 from .logzio_shipper import LogzioShipper
@@ -60,7 +62,11 @@ class Manager:
             return
         if not self._read_data_from_config():
             return
-        self._account_id = self._get_account_id()
+        try:
+            self._account_id = self._get_account_id()
+        except botocore.exceptions.BotoCoreError as bce:
+            logger.error(f'Cannot authenticate AWS account: {bce}')
+            return
         self._position_manager.sync_position_file(self._log_groups)
         for log_group in self._log_groups:
             self._load_data_from_position_file(log_group)
@@ -75,6 +81,8 @@ class Manager:
         try:
             session = boto3.session.Session(region_name=self._aws_region)
             sts_client = session.client('sts')
+        except botocore.exceptions.BotoCoreError as bce:
+            raise bce
         except Exception as e:
             logger.error(f'Encountered error while creating sts client: {e}')
             return ''
@@ -112,7 +120,7 @@ class Manager:
 
     def _get_logzio_credentials(self):
         self._logzio_token = os.getenv(self.ENV_LOGZIO_TOKEN)
-        if self._logzio_token is None:
+        if self._logzio_token is None or self._logzio_token == '':
             logger.error(f'Env var {self.ENV_LOGZIO_TOKEN} must be set!')
             return False
         self._logzio_listener = os.getenv(self.ENV_LOGZIO_LISTENER, self._DEFAULT_LOGZIO_LISTENER)
