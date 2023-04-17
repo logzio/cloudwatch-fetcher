@@ -1,0 +1,12 @@
+# log_groups - a list of log groups you want to follow
+log_groups:
+    # path - the log group you want to follow
+  - path: '/aws/lambda/my-lambda'
+    # custom_fields - optional. If you want to add additional fields to the logs from this log group
+    custom_fields:
+      key1: val1
+      key2: val2
+# aws_region - the AWS region your log groups are in. Note that all log groups should be in the same region
+aws_region: 'us-east-1'
+# collection_interval - interval IN MINUTES to fetch logs from Cloudwatch
+collection_interval: 10
