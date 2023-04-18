@@ -86,6 +86,7 @@ class Manager:
         if self._interval < min_interval or self._interval > max_interval:
             logger.error(f'Interval must be between {min_interval} and {max_interval} minutes!')
             return False
+        return True
 
     def _get_account_id(self):
         try:

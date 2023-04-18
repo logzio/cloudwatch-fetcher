@@ -11,9 +11,14 @@ class PositionManager:
     FIELD_PATH = 'path'
     FIELD_NEXT_TOKEN = 'next_token'
     FIELD_LATEST_TIME = 'latest_time'
+    _DEFAULT_RESET_POSITION_FILE = 'false'
+    ENV_RESET_POSITION = 'RESET_POSITION_FILE'
 
     def __init__(self, file_path):
         self._file_path = file_path
+        reset_str = os.getenv(self.ENV_RESET_POSITION, self._DEFAULT_RESET_POSITION_FILE)
+        if reset_str.lower() == 'true':
+            self._delete_position_file()
 
     def update_position_file(self, log_group):
         pos_file_yaml = self.get_pos_file_yaml()
@@ -70,3 +75,13 @@ class PositionManager:
                     f'configuration')
                 logger.debug('Updating position file')
                 self._create_new_position_file(current_log_groups)
+
+    def _delete_position_file(self):
+        try:
+            if os.path.exists(self._file_path):
+                os.remove(self._file_path)
+                logger.info('Deleted current position file')
+            else:
+                logger.warning(f'Env var {self.ENV_RESET_POSITION} is set to true, but no position file exists on {self._file_path}')
+        except Exception as e:
+            logger.error(f'Something went wrong while trying to delete current position file at {self._file_path}: {e}')
