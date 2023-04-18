@@ -72,6 +72,12 @@ Replace the following:
 | `<<LOGZIO-LOGS-SHIPPING-TOKEN>>` | Your [Logz.io logs shipping token](https://app.logz.io/#/dashboard/settings/general)                                                            |
 | `<<LOGZIO-LISTENER>>`            | Your logz.io [listener url](https://app.logz.io/#/dashboard/settings/manage-tokens/data-shipping?product=logs), for example: `listener.logz.io` |
 
+#### 5. Check Logz.io for your logs
+
+Give your logs some time to get from your system to ours, and then open [Logz.io](https://app.logz.io/).
+
+**NOTE** that the logs will have the original timestamp from Cloudwatch, so when you're searching for them, make sure that you're viewing the relevant time frame.
+
 ### Stop docker container
 
 When you stop the container, the code will run until completion of the iteration.
