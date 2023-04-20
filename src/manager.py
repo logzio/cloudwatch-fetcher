@@ -23,6 +23,8 @@ class Manager:
     _POS_FILE = 'shared/position.yaml'
     _DEFAULT_INTERVAL = 5
     _DEFAULT_LOGZIO_LISTENER = 'https://listener.logz.io:8071'
+    _MIN_INTERVAL = 5  # 5 minutes
+    _MAX_INTERVAL = 1380  # 1380 minutes (23 hours)
     ENV_LOGZIO_TOKEN = 'LOGZIO_LOG_SHIPPING_TOKEN'
     ENV_LOGZIO_LISTENER = 'LOGZIO_LISTENER'
     _KEY_NEXT_TOKEN = 'nextToken'
@@ -64,8 +66,8 @@ class Manager:
             return
         try:
             self._account_id = self._get_account_id()
-        except botocore.exceptions.BotoCoreError as bce:
-            logger.error(f'Cannot authenticate AWS account: {bce}')
+        except Exception as e:
+            logger.error(e)
             return
         if not self._valid_interval():
             return
@@ -80,11 +82,8 @@ class Manager:
         self.__exit_gracefully()
 
     def _valid_interval(self):
-        # Minimum 5 minutes, maximum 1380 minutes (23 hours)
-        min_interval = 5
-        max_interval = 1380
-        if self._interval < min_interval or self._interval > max_interval:
-            logger.error(f'Interval must be between {min_interval} and {max_interval} minutes!')
+        if self._interval < self._MIN_INTERVAL or self._interval > self._MAX_INTERVAL:
+            logger.error(f'Interval must be between {self._MIN_INTERVAL} and {self._MAX_INTERVAL} minutes!')
             return False
         return True
 
@@ -95,15 +94,13 @@ class Manager:
         except botocore.exceptions.BotoCoreError as bce:
             raise bce
         except Exception as e:
-            logger.error(f'Encountered error while creating sts client: {e}')
-            return ''
+            raise Exception(f'Encountered error while creating sts client: {e}')
         try:
             account_id = sts_client.get_caller_identity()['Account']
             logger.debug(f'AWS account id: {account_id}')
             return account_id
         except Exception as e:
-            logger.error(f'Encountered error while getting AWS account id: {e}')
-            return ''
+            raise Exception(f'Encountered error while getting AWS account id: {e}')
 
     def _read_data_from_config(self):
         config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), self._CONFIG_FILE)
