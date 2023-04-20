@@ -40,10 +40,10 @@ In the directory you created in the previous step, create a configuration file a
 
 | Field                      | Description                                                                                      | Required/Default |
 |----------------------------|--------------------------------------------------------------------------------------------------|------------------|
+| `aws_region`               | The AWS region your log groups are in. **Note** that all log groups should be in the same region | **Required**     |
 | `log_groups`               | An array of log group configuration                                                              | **Required**     |
 | `log_groups.path`          | The AWS Cloudwatch log group you want to tail                                                    | **Required**     |
 | `log_groups.custom_fields` | Array of key-value pairs, for adding custom fields to the logs from the log group                | -                |
-| `aws_region`               | The AWS region your log groups are in. **Note** that all log groups should be in the same region | **Required**     |
 | `collection_interval`      | Interval **IN MINUTES** to fetch logs from Cloudwatch                                            | Default: `5`     |
 
 
@@ -90,7 +90,7 @@ docker stop -t 30 logzio-cloudwatch-fetcher
 
 ### Position file
 
-After every successful iteration of each log group, the latest time & next token we got from AWS are will be written to a file name `position.yaml`
+After every successful iteration of each log group, the latest time & next token we got from AWS will be written to a file name `position.yaml`
 
 You can find the file inside your mounted host directory that you created.
 
