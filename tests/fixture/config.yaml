@@ -1,0 +1,11 @@
+log_groups:
+  - path: '/aws/lambda/my-lambda'
+    custom_fields:
+      key1: val1
+      key2: val2
+  - path: '/other/log/group'
+    custom_fields:
+      hello: world
+  - path: 'thisisaloggroup'
+aws_region: 'us-east-1'
+collection_interval: 10
