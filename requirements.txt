@@ -1,4 +1,4 @@
 boto3
 pyyaml
-requests
+requests==2.33.0
 urllib3
